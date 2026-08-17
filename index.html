@@ -1,1 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <title>SEALHOME GPS Tracker</title>
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">⌖</div>
+
+            <div>
+                <h1>SEALHOME</h1>
+                <span>GPS TRACKER</span>
+            </div>
+        </div>
+
+        <nav>
+            <button class="nav-item active">
+                <span>📍</span>
+                Dashboard
+            </button>
+
+            <button class="nav-item">
+                <span>🗺️</span>
+                History
+            </button>
+
+            <button class="nav-item">
+                <span>⭕</span>
+                Geofence
+            </button>
+
+            <button class="nav-item">
+                <span>⚙️</span>
+                Settings
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="connection-dot"></span>
+            System Online
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+
+            <div>
+                <h2>Live Tracking</h2>
+                <p>Real-time GPS monitoring</p>
+            </div>
+
+            <div class="online-status">
+                <span class="status-dot"></span>
+                <span id="connectionStatus">Connecting...</span>
+            </div>
+
+        </header>
+
+
+        <!-- MAP -->
+        <section class="map-section">
+
+            <div id="map"></div>
+
+            <div class="map-overlay">
+
+                <div class="tracker-status">
+
+                    <span class="status-dot"></span>
+
+                    <div>
+                        <strong id="trackerStatus">
+                            Waiting for GPS
+                        </strong>
+
+                        <small id="lastUpdate">
+                            Waiting for data...
+                        </small>
+                    </div>
+
+                </div>
+
+                <button id="centerButton">
+                    ⌖ Center
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- STAT CARDS -->
+        <section class="stats">
+
+            <div class="stat-card">
+
+                <div class="stat-icon">🚗</div>
+
+                <div>
+                    <span>Speed</span>
+                    <strong>
+                        <span id="speed">--</span>
+                        <small>km/h</small>
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">🔋</div>
+
+                <div>
+                    <span>Battery</span>
+
+                    <strong>
+                        <span id="battery">--</span>
+                        <small>%</small>
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">📡</div>
+
+                <div>
+                    <span>GSM Signal</span>
+
+                    <strong id="gsm">
+                        --
+                    </strong>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">🛰️</div>
+
+                <div>
+                    <span>GPS Status</span>
+
+                    <strong id="gpsStatus">
+                        --
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- LOCATION DETAILS -->
+        <section class="location-card">
+
+            <div class="section-title">
+
+                <div>
+                    <h3>Current Location</h3>
+                    <p>Latest GPS coordinates</p>
+                </div>
+
+                <span id="dataAge">
+                    --
+                </span>
+
+            </div>
+
+
+            <div class="coordinates">
+
+                <div>
+                    <span>Latitude</span>
+                    <strong id="latitude">--</strong>
+                </div>
+
+                <div>
+                    <span>Longitude</span>
+                    <strong id="longitude">--</strong>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
