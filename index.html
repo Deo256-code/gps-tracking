@@ -1,225 +1,429 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>SEALHOME GPS Tracker</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <title>
+        SEALHOME GPS Tracker
+    </title>
 
-    <link rel="stylesheet" href="style.css">
+
+    <!-- Leaflet map -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+
+    <!-- Dashboard CSS -->
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
 </head>
+
 
 <body>
 
+
 <div class="app">
 
-    <!-- SIDEBAR -->
+
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+
     <aside class="sidebar">
 
+
         <div class="brand">
-            <div class="brand-icon">⌖</div>
+
+            <div class="brand-icon">
+                S
+            </div>
 
             <div>
-                <h1>SEALHOME</h1>
-                <span>GPS TRACKER</span>
+
+                <h1>
+                    SEALHOME
+                </h1>
+
+                <span>
+                    GPS TRACKER
+                </span>
+
             </div>
+
         </div>
 
-        <nav>
-            <button class="nav-item active">
-                <span>📍</span>
-                Dashboard
-            </button>
 
-            <button class="nav-item">
-                <span>🗺️</span>
-                History
-            </button>
+        <!-- LIVE STATUS -->
 
-            <button class="nav-item">
-                <span>⭕</span>
-                Geofence
-            </button>
+        <div class="live-card">
 
-            <button class="nav-item">
-                <span>⚙️</span>
-                Settings
-            </button>
-        </nav>
-
-        <div class="sidebar-footer">
-            <span class="connection-dot"></span>
-            System Online
-        </div>
-
-    </aside>
-
-
-    <!-- MAIN -->
-    <main class="main">
-
-        <!-- TOP BAR -->
-        <header class="topbar">
+            <span class="status-dot"></span>
 
             <div>
-                <h2>Live Tracking</h2>
-                <p>Real-time GPS monitoring</p>
-            </div>
 
-            <div class="online-status">
-                <span class="status-dot"></span>
-                <span id="connectionStatus">Connecting...</span>
-            </div>
+                <strong>
+                    LIVE TRACKING
+                </strong>
 
-        </header>
-
-
-        <!-- MAP -->
-        <section class="map-section">
-
-            <div id="map"></div>
-
-            <div class="map-overlay">
-
-                <div class="tracker-status">
-
-                    <span class="status-dot"></span>
-
-                    <div>
-                        <strong id="trackerStatus">
-                            Waiting for GPS
-                        </strong>
-
-                        <small id="lastUpdate">
-                            Waiting for data...
-                        </small>
-                    </div>
-
-                </div>
-
-                <button id="centerButton">
-                    ⌖ Center
-                </button>
+                <small id="connectionText">
+                    Connecting...
+                </small>
 
             </div>
 
-        </section>
+        </div>
 
 
-        <!-- STAT CARDS -->
-        <section class="stats">
+        <!-- SPEED -->
 
-            <div class="stat-card">
+        <div class="metric-card">
 
-                <div class="stat-icon">🚗</div>
+            <div class="metric-icon speed-icon">
+                ⚡
+            </div>
 
-                <div>
-                    <span>Speed</span>
-                    <strong>
-                        <span id="speed">--</span>
-                        <small>km/h</small>
-                    </strong>
-                </div>
+            <div>
+
+                <span>
+                    SPEED
+                </span>
+
+                <strong id="speed">
+                    -- km/h
+                </strong>
 
             </div>
 
+        </div>
 
-            <div class="stat-card">
 
-                <div class="stat-icon">🔋</div>
+        <!-- BATTERY -->
 
-                <div>
-                    <span>Battery</span>
+        <div class="metric-card">
 
-                    <strong>
-                        <span id="battery">--</span>
-                        <small>%</small>
-                    </strong>
+            <div class="metric-icon battery-icon">
+                🔋
+            </div>
 
-                </div>
+            <div>
+
+                <span>
+                    BATTERY
+                </span>
+
+                <strong id="battery">
+                    N/A
+                </strong>
 
             </div>
 
+        </div>
 
-            <div class="stat-card">
 
-                <div class="stat-icon">📡</div>
+        <!-- GSM -->
 
-                <div>
-                    <span>GSM Signal</span>
+        <div class="metric-card">
 
-                    <strong id="gsm">
-                        --
-                    </strong>
+            <div class="metric-icon gsm-icon">
+                📶
+            </div>
+
+            <div class="metric-content">
+
+                <span>
+                    GSM SIGNAL
+                </span>
+
+                <strong id="gsm">
+                    --
+                </strong>
+
+                <div class="signal-bar">
+
+                    <div
+                        id="signalFill"
+                        class="signal-fill"
+                    ></div>
 
                 </div>
 
             </div>
 
+        </div>
 
-            <div class="stat-card">
 
-                <div class="stat-icon">🛰️</div>
+        <!-- GPS -->
 
-                <div>
-                    <span>GPS Status</span>
+        <div class="metric-card">
 
-                    <strong id="gpsStatus">
-                        --
-                    </strong>
+            <div class="metric-icon gps-icon">
+                📍
+            </div>
 
-                </div>
+            <div>
+
+                <span>
+                    GPS STATUS
+                </span>
+
+                <strong
+                    id="gpsStatus"
+                    class="status-good"
+                >
+                    SEARCHING
+                </strong>
 
             </div>
 
-        </section>
+        </div>
 
 
-        <!-- LOCATION DETAILS -->
-        <section class="location-card">
+        <!-- GEOFENCE -->
+
+        <div class="geofence-card">
 
             <div class="section-title">
 
-                <div>
-                    <h3>Current Location</h3>
-                    <p>Latest GPS coordinates</p>
-                </div>
+                <span>
+                    GEOFENCE
+                </span>
 
-                <span id="dataAge">
-                    --
+                <span
+                    id="geofenceBadge"
+                    class="badge"
+                >
+                    UNKNOWN
                 </span>
 
             </div>
 
 
-            <div class="coordinates">
+            <div class="geofence-info">
 
                 <div>
-                    <span>Latitude</span>
-                    <strong id="latitude">--</strong>
+
+                    <span>
+                        Radius
+                    </span>
+
+                    <strong id="geofenceRadius">
+                        -- m
+                    </strong>
+
                 </div>
 
+
                 <div>
-                    <span>Longitude</span>
-                    <strong id="longitude">--</strong>
+
+                    <span>
+                        Distance
+                    </span>
+
+                    <strong id="geofenceDistance">
+                        -- m
+                    </strong>
+
                 </div>
 
             </div>
 
+        </div>
+
+
+    </aside>
+
+
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+
+    <main class="main">
+
+
+        <!-- TOP BAR -->
+
+        <header class="topbar">
+
+            <div>
+
+                <h2>
+                    Live Location
+                </h2>
+
+                <p id="lastUpdate">
+                    Waiting for tracker...
+                </p>
+
+            </div>
+
+
+            <div class="top-actions">
+
+                <button
+                    id="centerButton"
+                    class="control-button"
+                >
+                    ⌖ Center Tracker
+                </button>
+
+
+                <button
+                    id="refreshButton"
+                    class="control-button"
+                >
+                    ↻ Refresh
+                </button>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- MAP -->
+
+        <section class="map-container">
+
+            <div
+                id="map"
+            ></div>
+
+
+            <!-- Map overlay -->
+
+            <div class="map-overlay">
+
+                <div class="overlay-title">
+                    TRACKER
+                </div>
+
+                <div
+                    id="mapStatus"
+                    class="overlay-status"
+                >
+                    Connecting...
+                </div>
+
+            </div>
+
+
         </section>
+
+
+
+        <!-- LOCATION INFORMATION -->
+
+        <section class="location-panel">
+
+
+            <div class="location-item">
+
+                <span>
+                    LATITUDE
+                </span>
+
+                <strong id="latitude">
+                    --
+                </strong>
+
+            </div>
+
+
+            <div class="location-item">
+
+                <span>
+                    LONGITUDE
+                </span>
+
+                <strong id="longitude">
+                    --
+                </strong>
+
+            </div>
+
+
+            <div class="location-item">
+
+                <span>
+                    LAST UPDATE
+                </span>
+
+                <strong id="updateTime">
+                    --
+                </strong>
+
+            </div>
+
+
+            <div class="location-item">
+
+                <span>
+                    TRACK POINTS
+                </span>
+
+                <strong id="trackPoints">
+                    0
+                </strong>
+
+            </div>
+
+
+        </section>
+
+
+        <!-- FOOTER -->
+
+        <footer>
+
+            <span>
+                SEALHOME (U) LTD
+            </span>
+
+            <span>
+                Powered by ThingSpeak + OpenStreetMap
+            </span>
+
+        </footer>
+
 
     </main>
 
 </div>
 
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- =========================================================
+     LEAFLET
+     ========================================================= -->
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
+
+
+<!-- CONFIG -->
 
 <script src="config.js"></script>
+
+
+<!-- APPLICATION -->
+
 <script src="app.js"></script>
 
+
 </body>
+
 </html>
