@@ -1,20 +1,23 @@
 // ============================================================
 // SEALHOME GPS TRACKER
-// LIVE DASHBOARD
+// LIVE DASHBOARD + CUSTOM GEOFENCE
 // ============================================================
 
-
 let map;
-
 let trackerMarker;
-
 let trailLine;
-
 let geofenceCircle;
 
 let trailPoints = [];
-
 let latestPosition = null;
+
+let currentGeofence = {
+    latitude: 0.341950,
+    longitude: 32.644957,
+    radius: 100
+};
+
+let pickingGeofence = false;
 
 
 // ============================================================
@@ -23,16 +26,11 @@ let latestPosition = null;
 
 function initializeMap() {
 
-    const fence =
-        CONFIG.GEOFENCE;
-
+    const fence = currentGeofence;
 
     map = L.map("map", {
-
         zoomControl: true,
-
         attributionControl: true
-
     });
 
 
@@ -41,19 +39,13 @@ function initializeMap() {
     L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
-
             maxZoom: 19,
-
-            attribution:
-                '&copy; OpenStreetMap contributors'
-
+            attribution: "&copy; OpenStreetMap contributors"
         }
     ).addTo(map);
 
 
-    // --------------------------------------------------------
     // Initial map position
-    // --------------------------------------------------------
 
     map.setView(
         [
@@ -64,69 +56,101 @@ function initializeMap() {
     );
 
 
-    // --------------------------------------------------------
     // Geofence
-    // --------------------------------------------------------
 
-    geofenceCircle =
-        L.circle(
+    geofenceCircle = L.circle(
+        [
+            fence.latitude,
+            fence.longitude
+        ],
+        {
+            radius: fence.radius,
 
-            [
-                fence.latitude,
-                fence.longitude
-            ],
+            color: "#7c3aed",
 
-            {
+            fillColor: "#a855f7",
 
-                radius:
-                    fence.radius,
+            fillOpacity: 0.12,
 
-                color:
-                    "#7c3aed",
+            weight: 2
+        }
+    ).addTo(map);
 
-                fillColor:
-                    "#a855f7",
 
-                fillOpacity:
-                    0.12,
+    updateGeofencePopup();
 
-                weight:
-                    2
 
-            }
+    // Tracking trail
 
-        ).addTo(map);
+    trailLine = L.polyline(
+        [],
+        {
+            color: "#2563eb",
+            weight: 4,
+            opacity: 0.75
+        }
+    ).addTo(map);
 
+
+    // Map click for geofence selection
+
+    map.on("click", function (event) {
+
+        if (!pickingGeofence) {
+            return;
+        }
+
+        const lat = event.latlng.lat;
+        const lng = event.latlng.lng;
+
+        setGeofenceCenter(lat, lng);
+
+        pickingGeofence = false;
+
+        const overlay =
+            document.getElementById("mapPickOverlay");
+
+        if (overlay) {
+            overlay.style.display = "none";
+        }
+
+        const button =
+            document.getElementById("pickGeofenceButton");
+
+        if (button) {
+            button.textContent = "⊙ Pick Center on Map";
+        }
+
+        showGeofenceMessage(
+            "Geofence center selected.",
+            "success"
+        );
+    });
+
+}
+
+
+// ============================================================
+// GEOFENCE POPUP
+// ============================================================
+
+function updateGeofencePopup() {
+
+    if (!geofenceCircle) {
+        return;
+    }
 
     geofenceCircle.bindPopup(
-        "SEALHOME Geofence<br>" +
+        "<strong>SEALHOME Geofence</strong><br>" +
         "Radius: " +
-        fence.radius +
-        " m"
+        Math.round(currentGeofence.radius) +
+        " m<br>" +
+        "Latitude: " +
+        currentGeofence.latitude.toFixed(6) +
+        "<br>" +
+        "Longitude: " +
+        currentGeofence.longitude.toFixed(6)
     );
-
-
-    // --------------------------------------------------------
-    // Trail
-    // --------------------------------------------------------
-
-    trailLine =
-        L.polyline(
-            [],
-            {
-
-                color:
-                    "#2563eb",
-
-                weight:
-                    4,
-
-                opacity:
-                    0.75
-
-            }
-        ).addTo(map);
-
 }
 
 
@@ -138,8 +162,7 @@ function createTrackerIcon() {
 
     return L.divIcon({
 
-        className:
-            "tracker-marker",
+        className: "tracker-marker",
 
         html: `
             <div style="
@@ -164,19 +187,16 @@ function createTrackerIcon() {
             </div>
         `,
 
-        iconSize:
-            [24, 24],
+        iconSize: [24, 24],
 
-        iconAnchor:
-            [12, 12]
-
+        iconAnchor: [12, 12]
     });
 
 }
 
 
 // ============================================================
-// FETCH THINGSPEAK DATA
+// FETCH THINGSPEAK GPS DATA
 // ============================================================
 
 async function fetchTrackerData() {
@@ -184,11 +204,9 @@ async function fetchTrackerData() {
     const channel =
         CONFIG.THINGSPEAK_CHANNEL_ID;
 
-
     const url =
         `https://api.thingspeak.com/channels/${channel}/feeds.json` +
         `?results=${CONFIG.TRAIL_POINTS}`;
-
 
     try {
 
@@ -196,7 +214,6 @@ async function fetchTrackerData() {
             await fetch(url, {
                 cache: "no-store"
             });
-
 
         if (!response.ok) {
 
@@ -207,10 +224,8 @@ async function fetchTrackerData() {
 
         }
 
-
         const data =
             await response.json();
-
 
         if (
             !data.feeds ||
@@ -223,16 +238,11 @@ async function fetchTrackerData() {
 
         }
 
-
         processThingSpeakData(
             data.feeds
         );
 
-
-        setConnection(
-            true
-        );
-
+        setConnection(true);
 
     } catch (error) {
 
@@ -241,11 +251,7 @@ async function fetchTrackerData() {
             error
         );
 
-
-        setConnection(
-            false
-        );
-
+        setConnection(false);
     }
 
 }
@@ -255,80 +261,63 @@ async function fetchTrackerData() {
 // PROCESS THINGSPEAK DATA
 // ============================================================
 
-function processThingSpeakData(
-    feeds
-) {
+function processThingSpeakData(feeds) {
 
     const validPoints = [];
 
+    feeds.forEach(feed => {
 
-    feeds.forEach(
-        feed => {
+        const lat =
+            parseFloat(feed.field1);
 
-            const lat =
-                parseFloat(
-                    feed.field1
-                );
+        const lng =
+            parseFloat(feed.field2);
 
+        if (
+            !isNaN(lat) &&
+            !isNaN(lng)
+        ) {
 
-            const lng =
-                parseFloat(
-                    feed.field2
-                );
+            validPoints.push({
 
+                lat: lat,
 
-            if (
-                !isNaN(lat) &&
-                !isNaN(lng)
-            ) {
+                lng: lng,
 
-                validPoints.push({
+                speed:
+                    parseFloat(
+                        feed.field3
+                    ) || 0,
 
-                    lat:
-                        lat,
+                battery:
+                    parseFloat(
+                        feed.field4
+                    ),
 
-                    lng:
-                        lng,
+                gsm:
+                    parseInt(
+                        feed.field5
+                    ),
 
-                    speed:
-                        parseFloat(
-                            feed.field3
-                        ) || 0,
+                status:
+                    parseInt(
+                        feed.field6
+                    ),
 
-                    battery:
-                        parseFloat(
-                            feed.field4
-                        ),
-
-                    gsm:
-                        parseInt(
-                            feed.field5
-                        ),
-
-                    status:
-                        parseInt(
-                            feed.field6
-                        ),
-
-                    time:
-                        new Date(
-                            feed.created_at
-                        )
-
-                });
-
-            }
-
+                time:
+                    new Date(
+                        feed.created_at
+                    )
+            });
         }
-    );
+
+    });
 
 
     if (
         validPoints.length === 0
     ) {
-
         return;
-
     }
 
 
@@ -346,24 +335,13 @@ function processThingSpeakData(
         latest;
 
 
-    updateTrackerMarker(
-        latest
-    );
+    updateTrackerMarker(latest);
 
+    updateTrail(validPoints);
 
-    updateTrail(
-        validPoints
-    );
+    updateDashboard(latest);
 
-
-    updateDashboard(
-        latest
-    );
-
-
-    updateGeofence(
-        latest
-    );
+    updateGeofence(latest);
 
 }
 
@@ -372,44 +350,32 @@ function processThingSpeakData(
 // UPDATE TRACKER MARKER
 // ============================================================
 
-function updateTrackerMarker(
-    position
-) {
+function updateTrackerMarker(position) {
 
-    const lat =
-        position.lat;
-
-    const lng =
-        position.lng;
-
+    const lat = position.lat;
+    const lng = position.lng;
 
     if (!trackerMarker) {
 
         trackerMarker =
             L.marker(
-
                 [
                     lat,
                     lng
                 ],
-
                 {
-
                     icon:
                         createTrackerIcon(),
 
                     zIndexOffset:
                         1000
-
                 }
-
             ).addTo(map);
 
 
         trackerMarker.bindPopup(
-            "SEALHOME GPS TRACKER"
+            "<strong>SEALHOME GPS TRACKER</strong>"
         );
-
 
     } else {
 
@@ -429,9 +395,7 @@ function updateTrackerMarker(
 // UPDATE TRAIL
 // ============================================================
 
-function updateTrail(
-    points
-) {
+function updateTrail(points) {
 
     const coordinates =
         points.map(
@@ -440,7 +404,6 @@ function updateTrail(
                 point.lng
             ]
         );
-
 
     trailLine.setLatLngs(
         coordinates
@@ -459,13 +422,9 @@ function updateTrail(
 // UPDATE DASHBOARD
 // ============================================================
 
-function updateDashboard(
-    data
-) {
+function updateDashboard(data) {
 
-    // --------------------------------------------------------
     // SPEED
-    // --------------------------------------------------------
 
     document.getElementById(
         "speed"
@@ -477,15 +436,12 @@ function updateDashboard(
         " km/h";
 
 
-    // --------------------------------------------------------
     // BATTERY
-    // --------------------------------------------------------
 
     const batteryElement =
         document.getElementById(
             "battery"
         );
-
 
     if (
         isNaN(data.battery) ||
@@ -502,28 +458,22 @@ function updateDashboard(
                 data.battery
             ) +
             "%";
-
     }
 
 
-    // --------------------------------------------------------
     // GSM
-    // --------------------------------------------------------
 
     updateGsm(
         data.gsm
     );
 
 
-    // --------------------------------------------------------
     // GPS STATUS
-    // --------------------------------------------------------
 
     const gpsElement =
         document.getElementById(
             "gpsStatus"
         );
-
 
     if (
         data.status === 1
@@ -542,13 +492,10 @@ function updateDashboard(
 
         gpsElement.className =
             "";
-
     }
 
 
-    // --------------------------------------------------------
     // LOCATION
-    // --------------------------------------------------------
 
     document.getElementById(
         "latitude"
@@ -562,9 +509,7 @@ function updateDashboard(
         data.lng.toFixed(6);
 
 
-    // --------------------------------------------------------
     // TIME
-    // --------------------------------------------------------
 
     const localTime =
         data.time.toLocaleTimeString();
@@ -596,15 +541,12 @@ function updateDashboard(
 // GSM DISPLAY
 // ============================================================
 
-function updateGsm(
-    signal
-) {
+function updateGsm(signal) {
 
     const gsmElement =
         document.getElementById(
             "gsm"
         );
-
 
     const fill =
         document.getElementById(
@@ -624,7 +566,6 @@ function updateGsm(
             "0%";
 
         return;
-
     }
 
 
@@ -646,33 +587,21 @@ function updateGsm(
     fill.style.width =
         percentage +
         "%";
-
 }
 
 
 // ============================================================
-// GEOFENCE
+// GEOFENCE DISPLAY
 // ============================================================
 
-function updateGeofence(
-    position
-) {
-
-    const fence =
-        CONFIG.GEOFENCE;
-
+function updateGeofence(position) {
 
     const distance =
         calculateDistance(
-
             position.lat,
-
             position.lng,
-
-            fence.latitude,
-
-            fence.longitude
-
+            currentGeofence.latitude,
+            currentGeofence.longitude
         );
 
 
@@ -680,7 +609,7 @@ function updateGeofence(
         "geofenceRadius"
     ).textContent =
         Math.round(
-            fence.radius
+            currentGeofence.radius
         ) +
         " m";
 
@@ -700,7 +629,7 @@ function updateGeofence(
 
 
     if (
-        distance <= fence.radius
+        distance <= currentGeofence.radius
     ) {
 
         badge.textContent =
@@ -722,7 +651,6 @@ function updateGeofence(
 
         badge.style.color =
             "#991b1b";
-
     }
 
 }
@@ -795,6 +723,772 @@ function calculateDistance(
 
 
 // ============================================================
+// SET GEOFENCE CENTER
+// ============================================================
+
+function setGeofenceCenter(
+    latitude,
+    longitude
+) {
+
+    currentGeofence.latitude =
+        parseFloat(latitude);
+
+    currentGeofence.longitude =
+        parseFloat(longitude);
+
+
+    const latInput =
+        document.getElementById(
+            "geofenceLat"
+        );
+
+    const lngInput =
+        document.getElementById(
+            "geofenceLng"
+        );
+
+
+    if (latInput) {
+
+        latInput.value =
+            currentGeofence.latitude.toFixed(6);
+    }
+
+
+    if (lngInput) {
+
+        lngInput.value =
+            currentGeofence.longitude.toFixed(6);
+    }
+
+
+    updateGeofenceCircle();
+
+}
+
+
+// ============================================================
+// UPDATE GEOFENCE CIRCLE
+// ============================================================
+
+function updateGeofenceCircle() {
+
+    if (!geofenceCircle) {
+        return;
+    }
+
+
+    geofenceCircle.setLatLng(
+        [
+            currentGeofence.latitude,
+            currentGeofence.longitude
+        ]
+    );
+
+
+    geofenceCircle.setRadius(
+        currentGeofence.radius
+    );
+
+
+    updateGeofencePopup();
+
+
+    if (latestPosition) {
+
+        updateGeofence(
+            latestPosition
+        );
+    }
+
+}
+
+
+// ============================================================
+// LOAD GEOFENCE INTO UI
+// ============================================================
+
+function loadGeofenceInputs() {
+
+    const latInput =
+        document.getElementById(
+            "geofenceLat"
+        );
+
+    const lngInput =
+        document.getElementById(
+            "geofenceLng"
+        );
+
+    const radiusInput =
+        document.getElementById(
+            "geofenceRadiusInput"
+        );
+
+
+    if (latInput) {
+
+        latInput.value =
+            currentGeofence.latitude.toFixed(6);
+    }
+
+
+    if (lngInput) {
+
+        lngInput.value =
+            currentGeofence.longitude.toFixed(6);
+    }
+
+
+    if (radiusInput) {
+
+        radiusInput.value =
+            Math.round(
+                currentGeofence.radius
+            );
+    }
+
+}
+
+
+// ============================================================
+// GET GEOFENCE FROM UI
+// ============================================================
+
+function readGeofenceInputs() {
+
+    const lat =
+        parseFloat(
+            document.getElementById(
+                "geofenceLat"
+            ).value
+        );
+
+
+    const lng =
+        parseFloat(
+            document.getElementById(
+                "geofenceLng"
+            ).value
+        );
+
+
+    const radius =
+        parseFloat(
+            document.getElementById(
+                "geofenceRadiusInput"
+            ).value
+        );
+
+
+    if (
+        isNaN(lat) ||
+        isNaN(lng) ||
+        isNaN(radius)
+    ) {
+
+        throw new Error(
+            "Please enter valid geofence values."
+        );
+    }
+
+
+    if (
+        lat < -90 ||
+        lat > 90
+    ) {
+
+        throw new Error(
+            "Latitude must be between -90 and 90."
+        );
+    }
+
+
+    if (
+        lng < -180 ||
+        lng > 180
+    ) {
+
+        throw new Error(
+            "Longitude must be between -180 and 180."
+        );
+    }
+
+
+    if (
+        radius < 10 ||
+        radius > 100000
+    ) {
+
+        throw new Error(
+            "Radius must be between 10 m and 100 km."
+        );
+    }
+
+
+    currentGeofence = {
+        latitude: lat,
+        longitude: lng,
+        radius: radius
+    };
+
+
+    updateGeofenceCircle();
+
+}
+
+
+// ============================================================
+// USE CURRENT TRACKER LOCATION
+// ============================================================
+
+function useTrackerLocation() {
+
+    if (!latestPosition) {
+
+        showGeofenceMessage(
+            "Tracker location is not available yet.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    setGeofenceCenter(
+        latestPosition.lat,
+        latestPosition.lng
+    );
+
+
+    showGeofenceMessage(
+        "Tracker location loaded as geofence center.",
+        "success"
+    );
+
+}
+
+
+// ============================================================
+// PICK GEOFENCE CENTER ON MAP
+// ============================================================
+
+function startMapGeofencePicker() {
+
+    if (pickingGeofence) {
+
+        pickingGeofence = false;
+
+        const overlay =
+            document.getElementById(
+                "mapPickOverlay"
+            );
+
+        if (overlay) {
+            overlay.style.display =
+                "none";
+        }
+
+        return;
+    }
+
+
+    pickingGeofence = true;
+
+
+    const overlay =
+        document.getElementById(
+            "mapPickOverlay"
+        );
+
+    if (overlay) {
+
+        overlay.style.display =
+            "flex";
+    }
+
+
+    const button =
+        document.getElementById(
+            "pickGeofenceButton"
+        );
+
+    if (button) {
+
+        button.textContent =
+            "✕ Cancel Map Selection";
+    }
+
+
+    showGeofenceMessage(
+        "Click anywhere on the map to select the geofence center.",
+        "info"
+    );
+
+}
+
+
+// ============================================================
+// RADIUS MINUS
+// ============================================================
+
+function decreaseRadius() {
+
+    const input =
+        document.getElementById(
+            "geofenceRadiusInput"
+        );
+
+    if (!input) {
+        return;
+    }
+
+
+    let radius =
+        parseFloat(input.value) || 100;
+
+
+    radius -= 10;
+
+
+    if (radius < 10) {
+        radius = 10;
+    }
+
+
+    input.value =
+        Math.round(radius);
+
+
+    currentGeofence.radius =
+        radius;
+
+
+    updateGeofenceCircle();
+
+}
+
+
+// ============================================================
+// RADIUS PLUS
+// ============================================================
+
+function increaseRadius() {
+
+    const input =
+        document.getElementById(
+            "geofenceRadiusInput"
+        );
+
+    if (!input) {
+        return;
+    }
+
+
+    let radius =
+        parseFloat(input.value) || 100;
+
+
+    radius += 10;
+
+
+    if (radius > 100000) {
+        radius = 100000;
+    }
+
+
+    input.value =
+        Math.round(radius);
+
+
+    currentGeofence.radius =
+        radius;
+
+
+    updateGeofenceCircle();
+
+}
+
+
+// ============================================================
+// SAVE GEOFENCE TO THINGSPEAK
+// ============================================================
+
+async function saveGeofence() {
+
+    try {
+
+        readGeofenceInputs();
+
+    } catch (error) {
+
+        showGeofenceMessage(
+            error.message,
+            "error"
+        );
+
+        return;
+    }
+
+
+    const status =
+        document.getElementById(
+            "geofenceSaveStatus"
+        );
+
+
+    const message =
+        document.getElementById(
+            "geofenceMessage"
+        );
+
+
+    if (status) {
+        status.textContent =
+            "SAVING...";
+    }
+
+
+    if (message) {
+        message.textContent =
+            "Sending geofence configuration...";
+    }
+
+
+    /*
+     * The CONFIG object must contain:
+     *
+     * GEOFENCE_CONFIG_CHANNEL_ID
+     * GEOFENCE_CONFIG_WRITE_API_KEY
+     *
+     */
+
+
+    const channel =
+        CONFIG.GEOFENCE_CONFIG_CHANNEL_ID;
+
+
+    const apiKey =
+        CONFIG.GEOFENCE_CONFIG_WRITE_API_KEY;
+
+
+    if (
+        !channel ||
+        !apiKey
+    ) {
+
+        showGeofenceMessage(
+            "Geofence ThingSpeak configuration is missing in config.js.",
+            "error"
+        );
+
+        if (status) {
+            status.textContent =
+                "CONFIG ERROR";
+        }
+
+        return;
+    }
+
+
+    const url =
+        "https://api.thingspeak.com/update" +
+        "?api_key=" +
+        encodeURIComponent(apiKey) +
+        "&field1=" +
+        encodeURIComponent(
+            currentGeofence.latitude
+        ) +
+        "&field2=" +
+        encodeURIComponent(
+            currentGeofence.longitude
+        ) +
+        "&field3=" +
+        encodeURIComponent(
+            currentGeofence.radius
+        );
+
+
+    try {
+
+        const response =
+            await fetch(url, {
+                method: "GET",
+                cache: "no-store"
+            });
+
+
+        const result =
+            await response.text();
+
+
+        console.log(
+            "Geofence ThingSpeak response:",
+            result
+        );
+
+
+        if (
+            !response.ok ||
+            result.trim() === "0"
+        ) {
+
+            throw new Error(
+                "ThingSpeak rejected the geofence update."
+            );
+        }
+
+
+        if (status) {
+
+            status.textContent =
+                "SAVED";
+        }
+
+
+        showGeofenceMessage(
+            "Geofence saved successfully.",
+            "success"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Geofence save error:",
+            error
+        );
+
+
+        if (status) {
+
+            status.textContent =
+                "FAILED";
+        }
+
+
+        showGeofenceMessage(
+            "Could not save geofence: " +
+            error.message,
+            "error"
+        );
+    }
+
+}
+
+
+// ============================================================
+// LOAD GEOFENCE FROM CONFIG CHANNEL
+// ============================================================
+
+async function loadGeofenceFromThingSpeak() {
+
+    const channel =
+        CONFIG.GEOFENCE_CONFIG_CHANNEL_ID;
+
+
+    const readKey =
+        CONFIG.GEOFENCE_CONFIG_READ_API_KEY;
+
+
+    if (!channel) {
+
+        console.warn(
+            "No geofence config channel configured."
+        );
+
+        return;
+    }
+
+
+    let url =
+        `https://api.thingspeak.com/channels/${channel}/feeds/last.json`;
+
+
+    if (readKey) {
+
+        url +=
+            "?api_key=" +
+            encodeURIComponent(
+                readKey
+            );
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                url,
+                {
+                    cache: "no-store"
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "HTTP " +
+                response.status
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const lat =
+            parseFloat(
+                data.field1
+            );
+
+
+        const lng =
+            parseFloat(
+                data.field2
+            );
+
+
+        const radius =
+            parseFloat(
+                data.field3
+            );
+
+
+        if (
+            isNaN(lat) ||
+            isNaN(lng) ||
+            isNaN(radius)
+        ) {
+
+            throw new Error(
+                "Invalid geofence configuration."
+            );
+        }
+
+
+        currentGeofence = {
+
+            latitude: lat,
+
+            longitude: lng,
+
+            radius: radius
+
+        };
+
+
+        loadGeofenceInputs();
+
+        updateGeofenceCircle();
+
+
+        console.log(
+            "Geofence loaded:",
+            currentGeofence
+        );
+
+
+        showGeofenceMessage(
+            "Geofence configuration loaded.",
+            "success"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Geofence load error:",
+            error
+        );
+
+
+        /*
+         * Keep the local/default geofence
+         * if the private channel cannot be read.
+         */
+
+        loadGeofenceInputs();
+    }
+
+}
+
+
+// ============================================================
+// SHOW GEOFENCE MESSAGE
+// ============================================================
+
+function showGeofenceMessage(
+    message,
+    type = "info"
+) {
+
+    const element =
+        document.getElementById(
+            "geofenceMessage"
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    element.textContent =
+        message;
+
+
+    element.className =
+        "geofence-message " +
+        type;
+
+}
+
+
+// ============================================================
+// RESET GEOFENCE
+// ============================================================
+
+function resetGeofence() {
+
+    if (
+        !CONFIG.GEOFENCE
+    ) {
+        return;
+    }
+
+
+    currentGeofence = {
+
+        latitude:
+            CONFIG.GEOFENCE.latitude,
+
+        longitude:
+            CONFIG.GEOFENCE.longitude,
+
+        radius:
+            CONFIG.GEOFENCE.radius
+
+    };
+
+
+    loadGeofenceInputs();
+
+    updateGeofenceCircle();
+
+
+    showGeofenceMessage(
+        "Geofence reset to default settings.",
+        "info"
+    );
+
+}
+
+
+// ============================================================
 // CONNECTION STATUS
 // ============================================================
 
@@ -822,6 +1516,7 @@ function setConnection(
         dot.style.background =
             "#16a34a";
 
+
         document.getElementById(
             "mapStatus"
         ).textContent =
@@ -835,11 +1530,11 @@ function setConnection(
         dot.style.background =
             "#ef4444";
 
+
         document.getElementById(
             "mapStatus"
         ).textContent =
             "OFFLINE";
-
     }
 
 }
@@ -859,7 +1554,6 @@ function formatNumber(
     ) {
 
         return "--";
-
     }
 
 
@@ -890,7 +1584,6 @@ function formatDistance(
             ) +
             " m"
         );
-
     }
 
 
@@ -914,7 +1607,6 @@ function centerTracker() {
     ) {
 
         return;
-
     }
 
 
@@ -928,8 +1620,7 @@ function centerTracker() {
         17,
 
         {
-            animate:
-                true
+            animate: true
         }
 
     );
@@ -941,42 +1632,279 @@ function centerTracker() {
 // REFRESH BUTTON
 // ============================================================
 
-document
-    .getElementById(
-        "refreshButton"
-    )
-    .addEventListener(
-        "click",
-        fetchTrackerData
-    );
-
-
-document
-    .getElementById(
-        "centerButton"
-    )
-    .addEventListener(
-        "click",
-        centerTracker
-    );
-
-
-// ============================================================
-// START
-// ============================================================
-
 document.addEventListener(
     "DOMContentLoaded",
     () => {
 
         initializeMap();
 
+        loadGeofenceInputs();
+
+        loadGeofenceFromThingSpeak();
+
         fetchTrackerData();
+
+
+        // Refresh GPS data
 
         setInterval(
             fetchTrackerData,
             CONFIG.REFRESH_INTERVAL
         );
+
+
+        // Refresh geofence configuration
+
+        setInterval(
+            loadGeofenceFromThingSpeak,
+            60000
+        );
+
+
+        // Center tracker
+
+        const centerButton =
+            document.getElementById(
+                "centerButton"
+            );
+
+        if (centerButton) {
+
+            centerButton.addEventListener(
+                "click",
+                centerTracker
+            );
+        }
+
+
+        // Refresh
+
+        const refreshButton =
+            document.getElementById(
+                "refreshButton"
+            );
+
+        if (refreshButton) {
+
+            refreshButton.addEventListener(
+                "click",
+                fetchTrackerData
+            );
+        }
+
+
+        // Use tracker location
+
+        const useTrackerButton =
+            document.getElementById(
+                "useTrackerLocation"
+            );
+
+        if (useTrackerButton) {
+
+            useTrackerButton.addEventListener(
+                "click",
+                useTrackerLocation
+            );
+        }
+
+
+        // Pick on map
+
+        const pickButton =
+            document.getElementById(
+                "pickGeofenceButton"
+            );
+
+        if (pickButton) {
+
+            pickButton.addEventListener(
+                "click",
+                startMapGeofencePicker
+            );
+        }
+
+
+        // Cancel map selection
+
+        const cancelPick =
+            document.getElementById(
+                "cancelMapPick"
+            );
+
+        if (cancelPick) {
+
+            cancelPick.addEventListener(
+                "click",
+                startMapGeofencePicker
+            );
+        }
+
+
+        // Save geofence
+
+        const saveButton =
+            document.getElementById(
+                "saveGeofenceButton"
+            );
+
+        if (saveButton) {
+
+            saveButton.addEventListener(
+                "click",
+                saveGeofence
+            );
+        }
+
+
+        // Reset geofence
+
+        const resetButton =
+            document.getElementById(
+                "resetGeofenceButton"
+            );
+
+        if (resetButton) {
+
+            resetButton.addEventListener(
+                "click",
+                resetGeofence
+            );
+        }
+
+
+        // Radius minus
+
+        const minusButton =
+            document.getElementById(
+                "radiusMinus"
+            );
+
+        if (minusButton) {
+
+            minusButton.addEventListener(
+                "click",
+                decreaseRadius
+            );
+        }
+
+
+        // Radius plus
+
+        const plusButton =
+            document.getElementById(
+                "radiusPlus"
+            );
+
+        if (plusButton) {
+
+            plusButton.addEventListener(
+                "click",
+                increaseRadius
+            );
+        }
+
+
+        // Radius manual editing
+
+        const radiusInput =
+            document.getElementById(
+                "geofenceRadiusInput"
+            );
+
+        if (radiusInput) {
+
+            radiusInput.addEventListener(
+                "input",
+                function () {
+
+                    const value =
+                        parseFloat(
+                            this.value
+                        );
+
+                    if (
+                        !isNaN(value) &&
+                        value >= 10 &&
+                        value <= 100000
+                    ) {
+
+                        currentGeofence.radius =
+                            value;
+
+                        updateGeofenceCircle();
+                    }
+
+                }
+            );
+        }
+
+
+        // Latitude manual editing
+
+        const latInput =
+            document.getElementById(
+                "geofenceLat"
+            );
+
+        if (latInput) {
+
+            latInput.addEventListener(
+                "input",
+                function () {
+
+                    const value =
+                        parseFloat(
+                            this.value
+                        );
+
+                    if (!isNaN(value)) {
+
+                        currentGeofence.latitude =
+                            value;
+
+                        updateGeofenceCircle();
+                    }
+
+                }
+            );
+        }
+
+
+        // Longitude manual editing
+
+        const lngInput =
+            document.getElementById(
+                "geofenceLng"
+            );
+
+        if (lngInput) {
+
+            lngInput.addEventListener(
+                "input",
+                function () {
+
+                    const value =
+                        parseFloat(
+                            this.value
+                        );
+
+                    if (!isNaN(value)) {
+
+                        currentGeofence.longitude =
+                            value;
+
+                        updateGeofenceCircle();
+                    }
+
+                }
+            );
+        }
+
+
+        // Initial configuration
+
+        loadGeofenceInputs();
 
     }
 );
