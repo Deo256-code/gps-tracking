@@ -44,6 +44,8 @@
     <aside class="sidebar">
 
 
+        <!-- BRAND -->
+
         <div class="brand">
 
             <div class="brand-icon">
@@ -190,7 +192,9 @@
         </div>
 
 
-        <!-- GEOFENCE -->
+        <!-- =================================================
+             GEOFENCE STATUS
+             ================================================= -->
 
         <div class="geofence-card">
 
@@ -237,6 +241,160 @@
 
                 </div>
 
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             GEOFENCE CONTROL
+             ================================================= -->
+
+        <div class="geofence-control-card">
+
+
+            <div class="section-title">
+
+                <span>
+                    GEOFENCE SETTINGS
+                </span>
+
+                <span
+                    id="geofenceSaveStatus"
+                    class="config-status"
+                >
+                    READY
+                </span>
+
+            </div>
+
+
+            <!-- LATITUDE -->
+
+            <label
+                for="geofenceLat"
+                class="config-label"
+            >
+                LATITUDE
+            </label>
+
+            <input
+                type="number"
+                id="geofenceLat"
+                class="config-input"
+                step="0.000001"
+                placeholder="Latitude"
+            >
+
+
+            <!-- LONGITUDE -->
+
+            <label
+                for="geofenceLng"
+                class="config-label"
+            >
+                LONGITUDE
+            </label>
+
+            <input
+                type="number"
+                id="geofenceLng"
+                class="config-input"
+                step="0.000001"
+                placeholder="Longitude"
+            >
+
+
+            <!-- RADIUS -->
+
+            <label
+                for="geofenceRadiusInput"
+                class="config-label"
+            >
+                RADIUS (METRES)
+            </label>
+
+            <div class="radius-input-row">
+
+                <button
+                    type="button"
+                    id="radiusMinus"
+                    class="radius-button"
+                >
+                    −
+                </button>
+
+                <input
+                    type="number"
+                    id="geofenceRadiusInput"
+                    class="config-input radius-input"
+                    min="10"
+                    max="100000"
+                    step="10"
+                    value="100"
+                >
+
+                <button
+                    type="button"
+                    id="radiusPlus"
+                    class="radius-button"
+                >
+                    +
+                </button>
+
+            </div>
+
+
+            <!-- USE CURRENT LOCATION -->
+
+            <button
+                type="button"
+                id="useTrackerLocation"
+                class="geofence-secondary-button"
+            >
+                📍 Use Tracker Location
+            </button>
+
+
+            <!-- PICK FROM MAP -->
+
+            <button
+                type="button"
+                id="pickGeofenceButton"
+                class="geofence-secondary-button"
+            >
+                ⊙ Pick Center on Map
+            </button>
+
+
+            <!-- SAVE -->
+
+            <button
+                type="button"
+                id="saveGeofenceButton"
+                class="geofence-save-button"
+            >
+                ✓ SAVE GEOFENCE
+            </button>
+
+
+            <!-- RESET -->
+
+            <button
+                type="button"
+                id="resetGeofenceButton"
+                class="geofence-reset-button"
+            >
+                Reset
+            </button>
+
+
+            <div
+                id="geofenceMessage"
+                class="geofence-message"
+            >
+                Geofence settings ready.
             </div>
 
         </div>
@@ -293,7 +451,9 @@
 
 
 
-        <!-- MAP -->
+        <!-- =================================================
+             MAP
+             ================================================= -->
 
         <section class="map-container">
 
@@ -320,11 +480,41 @@
             </div>
 
 
+            <!-- =================================================
+                 MAP GEOFENCE MODE MESSAGE
+                 ================================================= -->
+
+            <div
+                id="mapPickOverlay"
+                class="map-pick-overlay"
+                style="display: none;"
+            >
+
+                <strong>
+                    SELECT GEOFENCE CENTER
+                </strong>
+
+                <span>
+                    Click anywhere on the map
+                </span>
+
+                <button
+                    type="button"
+                    id="cancelMapPick"
+                >
+                    Cancel
+                </button>
+
+            </div>
+
+
         </section>
 
 
 
-        <!-- LOCATION INFORMATION -->
+        <!-- =================================================
+             LOCATION INFORMATION
+             ================================================= -->
 
         <section class="location-panel">
 
@@ -384,7 +574,10 @@
         </section>
 
 
-        <!-- FOOTER -->
+
+        <!-- =================================================
+             FOOTER
+             ================================================= -->
 
         <footer>
 
