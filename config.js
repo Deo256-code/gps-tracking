@@ -4,23 +4,47 @@
 
 const CONFIG = {
 
-    // ThingSpeak GPS channel
+    // ========================================================
+    // GPS / TRACKING CHANNEL
+    // ========================================================
+
     THINGSPEAK_CHANNEL_ID: "3457035",
 
-    // Number of historical GPS points to display
+    // Historical GPS points shown on map
     TRAIL_POINTS: 100,
 
-    // Refresh interval
+    // Dashboard refresh interval
     REFRESH_INTERVAL: 15000,
 
-    // --------------------------------------------------------
+
+    // ========================================================
+    // PRIVATE GEOFENCE CONFIGURATION CHANNEL
+    // ========================================================
+    //
+    // Channel 3457059:
+    //
+    // Field 1 = Geofence Latitude
+    // Field 2 = Geofence Longitude
+    // Field 3 = Geofence Radius
+    //
+
+    GEOFENCE_CONFIG_CHANNEL_ID: "3457059",
+
+    // IMPORTANT:
+    // Replace these with the API keys from ThingSpeak.
+    //
+    // Do NOT use the GPS channel Write API Key here.
+
+    GEOFENCE_CONFIG_WRITE_API_KEY: "YOUR_GEOFENCE_WRITE_API_KEY",
+
+    GEOFENCE_CONFIG_READ_API_KEY: "YOUR_GEOFENCE_READ_API_KEY",
+
+
+    // ========================================================
     // DEFAULT GEOFENCE
-    // --------------------------------------------------------
+    // ========================================================
     //
-    // These match the default values currently in your ESP32.
-    //
-    // Later we will connect these automatically to your private
-    // ThingSpeak geofence channel through a secure backend.
+    // Used if the private ThingSpeak channel cannot be read.
     //
 
     GEOFENCE: {
